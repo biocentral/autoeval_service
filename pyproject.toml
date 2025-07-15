@@ -1,26 +1,30 @@
-[tool.poetry]
+[project]
 name = "public-hub-services"
-version = "0.1.0"
+version = "0.1.1"
 description = "Microservice to provide open functionality for the biocentral hub server"
-authors = ["Sebastian <sebastian.franz@tum.de>"]
-license = "GPLv3"
+authors = [
+    {name = "Sebastian", email = "sebastian.franz@tum.de"}
+]
+license = {text = "GPLv3"}
 readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "redis>=5.2.1",
+    "pandas>=2.2.3",
+    "flask>=3.1.0",
+    "gunicorn>=23.0.0",
+    "numpy>=2.2.0",
+    "pyyaml>=6.0.2",
+]
 
-[tool.poetry.dependencies]
-python = "3.11.11"
-redis = "^5.2.1"
-pandas = "^2.2.3"
-flask = "^3.1.0"
-gunicorn = "^23.0.0"
-numpy = "^2.2.0"
-pyyaml = "^6.0.2"
-
-# Git-Dependencies
-autoeval = {git = "https://github.com/J-SNACKKB/autoeval.git", branch = "master"}
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["public_hub_services"]
