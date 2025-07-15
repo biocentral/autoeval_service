@@ -34,11 +34,12 @@ class PLMLeaderboardDatabase:
             raise ValueError("Unsupported file format. Use .csv, .yml, or .yaml")
 
     def _get_entry_id(self, entry):
-        entry_id = f"{entry['modelName']}{self.key_delimiter}{entry['trainingDate']}"
+        entry_id = f"{entry['embedder_name']}{self.key_delimiter}{entry['training_date']}"
         return entry_id
 
     def _sanity_check_entry(self, entry: Dict[str, Dict[str, Any]]) -> str:
-        NUM_EXPECTED_DATASETS = 6
+        # TODO Add proper verification
+        NUM_EXPECTED_DATASETS = 8
         results = entry["results"]
         if len(results.keys()) != NUM_EXPECTED_DATASETS:
             return f"Number of expected datasets is not {NUM_EXPECTED_DATASETS}!"
