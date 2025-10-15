@@ -119,3 +119,8 @@ class PLMLeaderboardDatabase:
         for entry in data['leaderboard']:
             entry_dict = json.loads(entry)
             self.add_entry(entry_dict)
+
+
+def init_leaderboard_database_instance(backup_data: Optional[Path] = None) -> PLMLeaderboardDatabase:
+    """Factory function to create the database instance"""
+    return PLMLeaderboardDatabase(backup_data=backup_data)
