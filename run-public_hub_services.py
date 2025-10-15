@@ -4,7 +4,7 @@ import logging
 import argparse
 
 from public_hub_services.utils import Constants
-from public_hub_services.server_entrypoint import create_app, run_server
+from public_hub_services.main import create_app, run_server
 
 
 def _setup_directories():
