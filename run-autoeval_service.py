@@ -3,8 +3,8 @@ import sys
 import logging
 import argparse
 
-from public_hub_services.utils import Constants
-from public_hub_services.main import create_app, run_server
+from autoeval_service.utils import Constants
+from autoeval_service.main import run_server
 
 
 def _setup_directories():

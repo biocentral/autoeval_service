@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import module routers
-from .autoeval import router as autoeval_router
+from .service import router as autoeval_router
 
 from .utils import str2bool, Constants
 
@@ -61,7 +61,7 @@ def run_server():
     if debug:
         # For development with reload - must use string
         uvicorn.run(
-            "public_hub_services.main:app",
+            "autoeval_service.main:app",
             host="0.0.0.0",
             port=Constants.SERVER_DEFAULT_PORT,
             reload=True,

@@ -25,20 +25,20 @@ RUN touch README.md
 RUN uv pip install --system -e .
 
 # Copying and installing the application code
-COPY public_hub_services ./public_hub_services
+COPY autoeval_service ./autoeval_service
 
 # Creating directories
 RUN mkdir -p /app/logs /app/data
 ENV LOGGER_DIR=/app/logs
 
 # Adding non-root user
-RUN adduser --disabled-password --gecos '' public-services-user
-RUN chown -R public-services-user:public-services-user /app
-USER public-services-user
+RUN adduser --disabled-password --gecos '' autoeval-service-user
+RUN chown -R autoeval-service-user:autoeval-service-user /app
+USER public-service-user
 
 # Remove cache to reduce container size
 RUN rm -rf ~/.cache/uv
 
 EXPOSE $PORT
 
-CMD ["sh", "-c", "uvicorn public_hub_services.main:app --host $HOST --port $PORT"]
+CMD ["sh", "-c", "uvicorn autoeval_service.main:app --host $HOST --port $PORT"]
