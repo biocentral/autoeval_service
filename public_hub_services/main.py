@@ -1,14 +1,11 @@
-# app/main.py
 import os
-from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import module routers
-from .plm_leaderboard import router as plm_router
-from .plm_leaderboard import init_plm_leaderboard_dependencies
+from .autoeval import router as autoeval_router
 
 from .utils import str2bool, Constants
 
@@ -17,11 +14,6 @@ from .utils import str2bool, Constants
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    USE_BACKUP_DATA = False
-    backup_data_path = Path("data/leaderboard-backup-24-03-2025.yml") if USE_BACKUP_DATA else None
-
-    # Initialize PLM Leaderboard module
-    #init_plm_leaderboard_dependencies(backup_data=backup_data_path)
 
     yield
 
@@ -48,7 +40,7 @@ def create_app() -> FastAPI:
     )
 
     # Include module routers
-    app.include_router(plm_router, prefix="/api/v1")
+    app.include_router(autoeval_router, prefix="/api/v1")
 
     # Health check
     @app.get("/health")
