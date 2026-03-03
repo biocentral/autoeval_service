@@ -17,7 +17,7 @@ class AutoEvalDatabase:
     ALL_PUBLISHED_KEY = "autoeval:all_published"
 
     def __init__(self):
-        redis_url = os.environ.get('LEADERBOARD_REDIS_URL', 'redis://localhost:6380')
+        redis_url = os.environ.get('AUTOEVAL_REDIS_URL', 'redis://localhost:6380')
 
         logger.info('Connecting to redis URL: {}'.format(redis_url))
         self.redis_client = redis.from_url(redis_url, decode_responses=True)
