@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import module routers
+from .service import get_autoeval_database
 from .service import router as autoeval_router
 
 from .utils import str2bool, Constants
@@ -15,6 +16,8 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
 
+    # Ensure database is initialized and can connect
+    _ = get_autoeval_database()
     yield
 
     # Shutdown - cleanup if needed
@@ -26,7 +29,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Biocentral Public Hub Services",
         description="API for biocentral services",
-        version="1.0.1",
+        version="1.4.0",
         lifespan=lifespan
     )
 
@@ -48,6 +51,7 @@ def create_app() -> FastAPI:
         return {"status": "healthy"}
 
     return app
+
 
 app = create_app()
 

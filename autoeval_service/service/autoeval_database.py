@@ -2,7 +2,6 @@ import os
 import redis
 import logging
 
-from pathlib import Path
 from typing import Optional, List
 
 from .biotrainer_autoeval.autoeval_report import AutoEvalReport
