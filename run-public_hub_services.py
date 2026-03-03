@@ -41,7 +41,6 @@ def _setup_logging():
 _setup_directories()
 _setup_logging()
 
-app = create_app()
 
 def main():
     parser = argparse.ArgumentParser(description='Biocentral hub server')
