@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field, field_validator, EmailStr
 from .biotrainer_autoeval.autoeval_report import AutoEvalReport
 
 
+# TODO Share models between biotrainer and service
+
 class PublishRequest(BaseModel):
     report: AutoEvalReport = Field(description="Report to publish")
     name: str = Field(description="Name of the publisher")
