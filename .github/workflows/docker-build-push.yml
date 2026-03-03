@@ -32,7 +32,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/public-hub-services
+          images: ghcr.io/${{ github.repository }}/autoeval-service
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
