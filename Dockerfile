@@ -34,7 +34,7 @@ ENV LOGGER_DIR=/app/logs
 # Adding non-root user
 RUN adduser --disabled-password --gecos '' autoeval-service-user
 RUN chown -R autoeval-service-user:autoeval-service-user /app
-USER public-service-user
+USER autoeval-service-user
 
 # Remove cache to reduce container size
 RUN rm -rf ~/.cache/uv
