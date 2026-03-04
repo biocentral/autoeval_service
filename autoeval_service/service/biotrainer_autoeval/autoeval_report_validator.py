@@ -100,6 +100,12 @@ class AutoEvalReportValidator:
     @staticmethod
     def validate_supervised_results(report: AutoEvalReport) -> Optional[str]:
         supervised_results = report.supervised_results
+        zeroshot_results = report.zeroshot_results
+
+        if len(supervised_results) == 0:
+            if len(zeroshot_results) > 0:
+                return None
+            return "No results found for any framework!"
 
         pbc_results = supervised_results.get("PBC", None)
         if pbc_results is None:
@@ -119,7 +125,7 @@ class AutoEvalReportValidator:
 
         all_tasks = set(list(pbc_results.results.keys()))
 
-        if len(all_tasks) != list(pbc_results.results.keys()):
+        if len(all_tasks) != len(list(pbc_results.results.keys())):
             return "Found duplicate tasks in supervised results."
 
         for pbc_dataset in _PBC_DATASETS:
@@ -130,7 +136,13 @@ class AutoEvalReportValidator:
 
     @staticmethod
     def validate_zeroshot_results(report: AutoEvalReport) -> Optional[str]:
+        supervised_results = report.supervised_results
         zeroshot_results = report.zeroshot_results
+
+        if len(zeroshot_results) == 0:
+            if len(supervised_results) > 0:
+                return None
+            return "No results found for any framework!"
 
         pgym_results = zeroshot_results.get("PGYM", None)
         if pgym_results is None:

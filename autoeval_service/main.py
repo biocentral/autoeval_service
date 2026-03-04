@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     # Startup
 
     # Ensure database is initialized and can connect
-    _ = get_autoeval_database()
+    autoeval_db = get_autoeval_database()
     yield
 
     # Shutdown - cleanup if needed
@@ -46,7 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(autoeval_router, prefix="/api/v1")
 
     # Health check
-    @app.get("/health")
+    @app.get("/api/v1/health")
     async def health_check():
         return {"status": "healthy"}
 

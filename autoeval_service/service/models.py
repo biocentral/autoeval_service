@@ -8,14 +8,14 @@ from .biotrainer_autoeval.autoeval_report import AutoEvalReport
 
 class PublishRequest(BaseModel):
     report: AutoEvalReport = Field(description="Report to publish")
-    name: str = Field(description="Name of the publisher")
-    email: EmailStr = Field(description="Email of the publisher")
+    name: str = Field(description="Name of the publisher", min_length=3)
+    email: EmailStr = Field(description="Email of the publisher", min_length=5)
     citation: Optional[str] = Field(default=None, description="Citation to be used for the model, must be a valid DOI")
 
     @field_validator('citation')
     def validate_citation(cls, v):
-        if v is not None and not "doi" in str(v).lower():
-            raise ValueError("Citation must be a valid DOI")
+        if v is not None and not str(v).lower().startswith("https://doi.org/"):
+            raise ValueError("Citation must be a valid DOI URL")
         if v is not None and len(v) > 100:
             raise ValueError("Citation must be less than 100 characters")
         return v
