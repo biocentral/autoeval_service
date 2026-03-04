@@ -25,8 +25,8 @@ async def get_all_reports(
         autoeval_db: AutoEvalDatabase = Depends(get_autoeval_database)
 ):
     """Retrieve all published autoeval reports"""
-    logger.info('[GET] All Autoeval Reports')
-    publish_requests = autoeval_db.get_all_publish_requests()
+    logger.info('[GET] All Public Autoeval Reports')
+    publish_requests = autoeval_db.get_all_published_requests()
     reports = [req.report for req in publish_requests]
     return ReportsResponse(reports=reports)
 
@@ -39,15 +39,19 @@ async def publish_report(
         autoeval_db: AutoEvalDatabase = Depends(get_autoeval_database)
 ):
     """Publish new data to the PLM leaderboard"""
-    logger.info(f'[POST] Publish Report: {request.report.embedder_name}')
+    embedder_name = request.report.embedder_name
+    logger.info(f'[POST] Publish Report: {embedder_name}')
 
     validator = AutoEvalReportValidator(request.report)
     validation_error = validator.validate()
     if validation_error is not None:
         return JSONResponse(content={"error": validation_error}, status_code=400)
 
+    if autoeval_db.public_report_exists(request):
+        return JSONResponse(content={"error": f"Report for {embedder_name} already exists."}, status_code=400)
+
     if autoeval_db.add_publish_request(request):
-        return JSONResponse(content={"message": "Report published successfully. "
+        return JSONResponse(content={"message": f"Report for {embedder_name} published successfully. "
                                                 "Thank you for your contribution!"}, status_code=201)
     else:
         return JSONResponse(content={"error": "Internal error while trying to publish report"}, status_code=500)

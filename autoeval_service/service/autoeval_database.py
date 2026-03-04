@@ -23,8 +23,13 @@ class AutoEvalDatabase:
 
         logger.info(self.redis_client.info())
 
+    def public_report_exists(self, request: PublishRequest) -> bool:
+        uid = request.report.embedder_name.replace("/", "-")
+        key = f"{self.PUBLISH_PREFIX}{uid}"
+        return self.redis_client.exists(key)
+
     def add_publish_request(self, request: PublishRequest) -> bool:
-        uid = request.report.get_uid()
+        uid = request.report.embedder_name.replace("/", "-")
         key = f"{self.PUBLISH_PREFIX}{uid}"
         try:
             self.redis_client.set(key, request.model_dump_json())
@@ -34,18 +39,18 @@ class AutoEvalDatabase:
             logger.error(f"Error adding publish request: {str(e)}")
             return False
 
-    def get_publish_request(self, uid: str) -> Optional[PublishRequest]:
+    def _get_publish_request(self, uid: str) -> Optional[PublishRequest]:
         key = f"{self.PUBLISH_PREFIX}{uid}"
         data = self.redis_client.get(key)
         if not data:
             return None
         return PublishRequest.model_validate_json(data)
 
-    def get_all_publish_requests(self) -> List[PublishRequest]:
+    def get_all_published_requests(self) -> List[PublishRequest]:
         uids = self.redis_client.smembers(self.ALL_PUBLISHED_KEY)
         requests = []
         for uid in uids:
-            req = self.get_publish_request(uid)
+            req = self._get_publish_request(uid)
             if req:
                 requests.append(req)
         return requests
@@ -73,6 +78,7 @@ class AutoEvalDatabase:
             all_keys = self.redis_client.keys('autoeval:*')
             if all_keys:
                 self.redis_client.delete(*all_keys)
+            logger.info("Database cleared successfully")
             return True
         except Exception as e:
             logger.error(f"An error occurred while clearing the database: {str(e)}")
