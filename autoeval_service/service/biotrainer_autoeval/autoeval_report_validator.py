@@ -23,6 +23,16 @@ _PBC_DATASETS = {
     "secondary_structure",
 }
 
+# VALIDATION CONSTANTS
+# GENERAL
+MAX_ALLOWED_TIME_DELTA = timedelta(days=60)
+# PBC
+N_EXPECTED_TASKS_PBC = 4
+EXPECTED_MIN_SEQ_LEN_PBC = 0
+EXPECTED_MAX_SEQ_LEN_PBC = 2000
+# PGYM
+N_EXPECTED_TASKS_PGYM = 3
+
 
 @lru_cache(maxsize=12)
 def _validate_model_id(model_id: str) -> Optional[str]:
@@ -85,15 +95,15 @@ class AutoEvalReportValidator:
             return "Invalid date format. Expected YYYY-MM-DD."
 
         current_date = datetime.now()
-        thirty_days_ago = current_date - timedelta(days=30)
+        n_days_ago = current_date - MAX_ALLOWED_TIME_DELTA
 
         # Check if the date is in the future
         if training_date_obj > (current_date + timedelta(days=1)):  # Account for time zone differences
             return "Training date cannot be in the future."
 
-        # Check if the date is older than 30 days
-        if training_date_obj < thirty_days_ago:
-            return "Training result cannot be older than 30 days."
+        # Check if the date is older than MAX_ALLOWED_TIME_DELTA.days
+        if training_date_obj < n_days_ago:
+            return f"Training result cannot be older than {MAX_ALLOWED_TIME_DELTA.days} days."
 
         return None
 
@@ -111,15 +121,13 @@ class AutoEvalReportValidator:
         if pbc_results is None:
             return "Supervised results must contain PBC task."
 
-        n_expected_tasks = 9
-        if len(pbc_results.results) != n_expected_tasks:
-            return f"Supervised results must contain {n_expected_tasks} tasks."
+        if len(pbc_results.results) != N_EXPECTED_TASKS_PBC:
+            return f"Supervised results must contain {N_EXPECTED_TASKS_PBC} tasks."
 
-        expected_min_seq_len = 0
-        expected_max_seq_len = 2000
-        if pbc_results.min_seq_len != expected_min_seq_len or pbc_results.max_seq_len != expected_max_seq_len:
+        if pbc_results.min_seq_len != EXPECTED_MIN_SEQ_LEN_PBC or pbc_results.max_seq_len != EXPECTED_MAX_SEQ_LEN_PBC:
             return (f"Supervised results must have "
-                    f"min_seq_len={expected_min_seq_len} and max_seq_len={expected_max_seq_len} for publishing.")
+                    f"min_seq_len={EXPECTED_MIN_SEQ_LEN_PBC} and "
+                    f"max_seq_len={EXPECTED_MAX_SEQ_LEN_PBC} for publishing.")
 
         # TODO Retrieve from biotrainer
 
@@ -148,8 +156,7 @@ class AutoEvalReportValidator:
         if pgym_results is None:
             return "Zero-shot results must contain PGYM task."
 
-        n_expected_tasks = 3
-        if len(pgym_results.aggregated_results) != n_expected_tasks:
-            return f"Zero-shot results must contain {n_expected_tasks} tasks."
+        if len(pgym_results.aggregated_results) != N_EXPECTED_TASKS_PGYM:
+            return f"Zero-shot results must contain {N_EXPECTED_TASKS_PGYM} tasks."
 
         return None
