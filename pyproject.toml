@@ -1,6 +1,6 @@
 [project]
 name = "autoeval-service"
-version = "1.4.0"
+version = "2.0.0"
 description = "Autoeval service powering the autoeval comparison dashboard"
 authors = [
     {name = "Sebastian", email = "sebastian.franz@tum.de"}
@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "redis>=7.2.1",
-    "fastapi>=0.135.1",
-    "uvicorn>=0.41.0",
-    "email-validator>=2.3.0",
-    "requests>=2.32.5",
+    "fastapi>=0.141.1,<0.150.0",
+    "uvicorn>=0.52.3,<0.60.0",
+    "requests>=2.34.2,<2.40.0",
+    "biotrainer-core>=2.0.0,<3.0.0"
 ]
 
 [project.optional-dependencies]
