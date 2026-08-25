@@ -1,24 +1,7 @@
 from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from pydantic import BaseModel, Field
 
-from .biotrainer_autoeval.autoeval_report import AutoEvalReport
-
-
-# TODO Share models between biotrainer and service
-
-class PublishRequest(BaseModel):
-    report: AutoEvalReport = Field(description="Report to publish")
-    name: str = Field(description="Name of the publisher", min_length=3)
-    email: EmailStr = Field(description="Email of the publisher", min_length=5)
-    citation: Optional[str] = Field(default=None, description="Citation to be used for the model, must be a valid DOI")
-
-    @field_validator('citation')
-    def validate_citation(cls, v):
-        if v is not None and not str(v).lower().startswith("https://doi.org/"):
-            raise ValueError("Citation must be a valid DOI URL")
-        if v is not None and len(v) > 100:
-            raise ValueError("Citation must be less than 100 characters")
-        return v
+from biotrainer_core.data_classes.autoeval import AutoEvalReport, AutoEvalPublishedReport
 
 
 class ComparisonStoreRequest(BaseModel):
@@ -37,7 +20,8 @@ class ComparisonRetrieveResponse(BaseModel):
 
 
 class ReportsResponse(BaseModel):
-    reports: List[AutoEvalReport] = Field(description="List of all available reports")
+    """ Response for retrieving all published reports"""
+    reports: List[AutoEvalPublishedReport] = Field(description="List of all available reports")
 
 
 class ErrorResponse(BaseModel):

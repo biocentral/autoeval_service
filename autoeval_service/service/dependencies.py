@@ -11,4 +11,6 @@ def get_autoeval_database() -> AutoEvalDatabase:
     global _autoeval_database_instance
     if not _autoeval_database_instance:
         _autoeval_database_instance = init_autoeval_database_instance()
+    if _autoeval_database_instance is None:
+        raise ValueError("AutoEvalDatabase could not be initialized!")
     return _autoeval_database_instance

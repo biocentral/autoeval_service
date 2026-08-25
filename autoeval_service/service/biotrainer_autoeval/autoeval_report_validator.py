@@ -1,37 +1,34 @@
+import logging
 import requests
 
 from typing import Optional
 from functools import lru_cache
 from datetime import datetime, timedelta
 
-from .autoeval_report import AutoEvalReport
+from biotrainer_core.data_classes.autoeval import AutoEvalReport
+from biotrainer_core.data_classes.autoeval import PBCSupervisedDatasetName, all_pbc_supervised_datasets
 
-# TODO Replace Biotrainer and autoeval constants
+logger = logging.getLogger(__name__)
+
 _PREDEFINED_EMBEDDERS = {
     "one_hot_encoding",
     "random_embedder",
+    "length_embedder",
     "AAOntology",
     "blosum62",
-}
-
-_PBC_DATASETS = {
-    "binding",
-    "conservation",
-    "disorder",
-    "membrane",
-    "scl",
-    "secondary_structure",
 }
 
 # VALIDATION CONSTANTS
 # GENERAL
 MAX_ALLOWED_TIME_DELTA = timedelta(days=60)
 # PBC
-N_EXPECTED_TASKS_PBC = 4
+N_EXPECTED_TASKS_PBC = len(all_pbc_supervised_datasets())
 EXPECTED_MIN_SEQ_LEN_PBC = 0
 EXPECTED_MAX_SEQ_LEN_PBC = 2000
 # PGYM
 N_EXPECTED_TASKS_PGYM = 3
+# CONTACT
+N_EXPECTED_TASKS_CONTACT = 1
 
 
 @lru_cache(maxsize=12)
@@ -62,11 +59,30 @@ class AutoEvalReportValidator:
     def __init__(self, report: AutoEvalReport):
         self._report = report
 
+    def check_official(self) -> bool:
+        embedder_name = self._report.embedder_name
+
+        if embedder_name in _PREDEFINED_EMBEDDERS:
+            return True
+        
+        huggingface_error = _validate_model_id(embedder_name)
+
+        if huggingface_error:
+            logger.info(f"Encountered huggingface "
+                        f"error while publishing model {self._report.embedder_name}: {huggingface_error}")
+            return False
+        return True
+
     def validate(self) -> Optional[str]:
-        validation_functions = [lambda report: self.validate_embedder_name(report),
-                                lambda report: self.validate_training_date(report),
-                                lambda report: self.validate_supervised_results(report),
-                                lambda report: self.validate_zeroshot_results(report)]
+        validation_functions = [
+            lambda report: self.validate_embedder_name(report),
+            lambda report: self.validate_training_date(report),
+            lambda report: self.validate_any_result_exists(report),
+            lambda report: self.validate_supervised_results(report),
+            lambda report: self.validate_zeroshot_results(report),
+            lambda report: self.validate_zeroshot_contact_results(report),
+            lambda report: self.validate_supervised_contact_results(report),
+        ]
         for func in validation_functions:
             error = func(self._report)
             if error:
@@ -78,11 +94,6 @@ class AutoEvalReportValidator:
         embedder_name = report.embedder_name
         if len(embedder_name) == 0:
             return "Embedder name is required"
-
-        huggingface_error = _validate_model_id(embedder_name)
-        if huggingface_error:
-            return (f"Embedder name not found on huggingface: (Error - {huggingface_error})\n"
-                    f"If you do want to submit your model, please contact us at info@biocentral.cloud.")
         return None
 
     @staticmethod
@@ -108,14 +119,21 @@ class AutoEvalReportValidator:
         return None
 
     @staticmethod
+    def validate_any_result_exists(report: AutoEvalReport) -> Optional[str]:
+        all_reports = [report.supervised_results, report.zeroshot_results, report.zeroshot_contact_results,
+                       report.supervised_contact_results]
+
+        all_empty = all(len(report) == 0 for report in all_reports)
+        if all_empty:
+            return "No results found for any framework!"
+        return None
+
+    @staticmethod
     def validate_supervised_results(report: AutoEvalReport) -> Optional[str]:
         supervised_results = report.supervised_results
-        zeroshot_results = report.zeroshot_results
 
         if len(supervised_results) == 0:
-            if len(zeroshot_results) > 0:
-                return None
-            return "No results found for any framework!"
+            return None
 
         pbc_results = supervised_results.get("PBC", None)
         if pbc_results is None:
@@ -129,34 +147,51 @@ class AutoEvalReportValidator:
                     f"min_seq_len={EXPECTED_MIN_SEQ_LEN_PBC} and "
                     f"max_seq_len={EXPECTED_MAX_SEQ_LEN_PBC} for publishing.")
 
-        # TODO Retrieve from biotrainer
-
         all_tasks = set(list(pbc_results.results.keys()))
 
         if len(all_tasks) != len(list(pbc_results.results.keys())):
             return "Found duplicate tasks in supervised results."
 
-        for pbc_dataset in _PBC_DATASETS:
-            if not any(pbc_dataset in task for task in all_tasks):
+        for pbc_dataset in PBCSupervisedDatasetName:
+            if not any(pbc_dataset.value in task for task in all_tasks):
                 return f"Supervised results must contain results for {pbc_dataset} dataset."
 
         return None
 
     @staticmethod
     def validate_zeroshot_results(report: AutoEvalReport) -> Optional[str]:
-        supervised_results = report.supervised_results
         zeroshot_results = report.zeroshot_results
 
         if len(zeroshot_results) == 0:
-            if len(supervised_results) > 0:
-                return None
-            return "No results found for any framework!"
+            return None
 
         pgym_results = zeroshot_results.get("PGYM", None)
         if pgym_results is None:
             return "Zero-shot results must contain PGYM task."
 
-        if len(pgym_results.aggregated_results) != N_EXPECTED_TASKS_PGYM:
+        if len(pgym_results.task_results) != N_EXPECTED_TASKS_PGYM:
             return f"Zero-shot results must contain {N_EXPECTED_TASKS_PGYM} tasks."
+
+        return None
+
+    @staticmethod
+    def validate_zeroshot_contact_results(report: AutoEvalReport) -> Optional[str]:
+        zeroshot_contact_results = report.zeroshot_contact_results
+
+        if len(zeroshot_contact_results) == 0:
+            return None
+
+        # TODO
+
+        return None
+
+    @staticmethod
+    def validate_supervised_contact_results(report: AutoEvalReport) -> Optional[str]:
+        supervised_contact_results = report.supervised_contact_results
+
+        if len(supervised_contact_results) == 0:
+            return None
+
+        # TODO
 
         return None

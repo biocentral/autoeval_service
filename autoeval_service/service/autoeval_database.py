@@ -3,9 +3,9 @@ import redis
 import logging
 
 from typing import Optional, List
+from biotrainer_core.data_classes.autoeval import AutoEvalReport, AutoEvalPublishedReport
 
-from .biotrainer_autoeval.autoeval_report import AutoEvalReport
-from .models import PublishRequest, ComparisonStoreRequest
+from .models import ComparisonStoreRequest
 
 logger = logging.getLogger(__name__)
 
@@ -23,34 +23,34 @@ class AutoEvalDatabase:
 
         logger.info(self.redis_client.info())
 
-    def public_report_exists(self, request: PublishRequest) -> bool:
-        uid = request.report.embedder_name.replace("/", "-")
+    def published_report_exists(self, report_to_publish: AutoEvalPublishedReport) -> bool:
+        uid = report_to_publish.report.embedder_name.replace("/", "-")
         key = f"{self.PUBLISH_PREFIX}{uid}"
-        return self.redis_client.exists(key)
+        return self.redis_client.exists(key) > 0
 
-    def add_publish_request(self, request: PublishRequest) -> bool:
-        uid = request.report.embedder_name.replace("/", "-")
+    def add_report_to_publish(self, report_to_publish: AutoEvalPublishedReport) -> bool:
+        uid = report_to_publish.report.embedder_name.replace("/", "-")
         key = f"{self.PUBLISH_PREFIX}{uid}"
         try:
-            self.redis_client.set(key, request.model_dump_json())
+            self.redis_client.set(key, report_to_publish.model_dump_json())
             self.redis_client.sadd(self.ALL_PUBLISHED_KEY, uid)
             return True
         except Exception as e:
             logger.error(f"Error adding publish request: {str(e)}")
             return False
 
-    def _get_publish_request(self, uid: str) -> Optional[PublishRequest]:
+    def _get_published_report(self, uid: str) -> Optional[AutoEvalPublishedReport]:
         key = f"{self.PUBLISH_PREFIX}{uid}"
         data = self.redis_client.get(key)
         if not data:
             return None
-        return PublishRequest.model_validate_json(data)
+        return AutoEvalPublishedReport.model_validate_json(data)
 
-    def get_all_published_requests(self) -> List[PublishRequest]:
+    def get_all_published_reports(self) -> List[AutoEvalPublishedReport]:
         uids = self.redis_client.smembers(self.ALL_PUBLISHED_KEY)
         requests = []
         for uid in uids:
-            req = self._get_publish_request(uid)
+            req = self._get_published_report(str(uid))
             if req:
                 requests.append(req)
         return requests

@@ -1,12 +1,14 @@
 import logging
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+
+from biotrainer_core.data_classes.autoeval import AutoEvalPublishedReport
 
 from .autoeval_database import AutoEvalDatabase
 from .dependencies import get_autoeval_database
 from .biotrainer_autoeval.autoeval_report_validator import AutoEvalReportValidator
-from .models import PublishRequest, ReportsResponse, ComparisonStoreRequest, ComparisonStoreResponse, \
+from .models import ReportsResponse, ComparisonStoreRequest, ComparisonStoreResponse, \
     ComparisonRetrieveResponse
 
 logger = logging.getLogger(__name__)
@@ -26,16 +28,15 @@ async def get_all_reports(
 ):
     """Retrieve all published autoeval reports"""
     logger.info('[GET] All Public Autoeval Reports')
-    publish_requests = autoeval_db.get_all_published_requests()
-    reports = [req.report for req in publish_requests]
-    return ReportsResponse(reports=reports)
+    published_reports = autoeval_db.get_all_published_reports()
+    return ReportsResponse(reports=published_reports)
 
 
 @router.post("/publish/",
              summary="Publish a new autoeval report",
              description="Store a report and publisher information in the database")
 async def publish_report(
-        request: PublishRequest,
+        request: AutoEvalPublishedReport,  # Report serves as request model itself
         autoeval_db: AutoEvalDatabase = Depends(get_autoeval_database)
 ):
     """Publish new data to the PLM leaderboard"""
@@ -43,14 +44,18 @@ async def publish_report(
     logger.info(f'[POST] Publish Report: {embedder_name}')
 
     validator = AutoEvalReportValidator(request.report)
+
     validation_error = validator.validate()
     if validation_error is not None:
         return JSONResponse(content={"error": validation_error}, status_code=400)
 
-    if autoeval_db.public_report_exists(request):
+    if autoeval_db.published_report_exists(request):
         return JSONResponse(content={"error": f"Report for {embedder_name} already exists."}, status_code=400)
 
-    if autoeval_db.add_publish_request(request):
+    official = validator.check_official()
+    request.official = official
+
+    if autoeval_db.add_report_to_publish(request):
         return JSONResponse(content={"message": f"Report for {embedder_name} published successfully. "
                                                 "Thank you for your contribution!"}, status_code=201)
     else:
