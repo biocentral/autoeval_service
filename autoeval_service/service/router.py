@@ -7,7 +7,7 @@ from biotrainer_core.data_classes.autoeval import AutoEvalPublishedReport
 
 from .autoeval_database import AutoEvalDatabase
 from .dependencies import get_autoeval_database
-from .biotrainer_autoeval.autoeval_report_validator import AutoEvalReportValidator
+from .autoeval_report_validator import AutoEvalReportValidator
 from .models import ReportsResponse, ComparisonStoreRequest, ComparisonStoreResponse, \
     ComparisonRetrieveResponse
 

@@ -48,12 +48,13 @@ class AutoEvalDatabase:
 
     def get_all_published_reports(self) -> List[AutoEvalPublishedReport]:
         uids = self.redis_client.smembers(self.ALL_PUBLISHED_KEY)
-        requests = []
+        reports = []
         for uid in uids:
-            req = self._get_published_report(str(uid))
-            if req:
-                requests.append(req)
-        return requests
+            rep = self._get_published_report(str(uid))
+            if rep:
+                rep.email = "placeholder@example.com"
+                reports.append(rep)
+        return reports
 
     def add_comparison_request_report(self, request: ComparisonStoreRequest) -> Optional[str]:
         uid = request.report.get_uid()
