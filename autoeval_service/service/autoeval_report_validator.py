@@ -28,7 +28,7 @@ EXPECTED_MAX_SEQ_LEN_PBC = 2000
 # PGYM
 N_EXPECTED_TASKS_PGYM = 3
 # CONTACT
-N_EXPECTED_TASKS_CONTACT = 1
+N_EXPECTED_TASKS_CONTACT = 3
 
 
 @lru_cache(maxsize=12)
@@ -135,7 +135,7 @@ class AutoEvalReportValidator:
         if len(supervised_results) == 0:
             return None
 
-        pbc_results = supervised_results.get("PBC", None)
+        pbc_results = supervised_results.get("PBC_SUPERVISED", None)
         if pbc_results is None:
             return "Supervised results must contain PBC task."
 
@@ -181,7 +181,12 @@ class AutoEvalReportValidator:
         if len(zeroshot_contact_results) == 0:
             return None
 
-        # TODO
+        pbc_results = zeroshot_contact_results.get("PBC_ZEROSHOT_CONTACT", None)
+        if pbc_results is None:
+            return "Zeroshot contact results must contain PBC framework."
+
+        if len(pbc_results.task_results) != N_EXPECTED_TASKS_CONTACT:
+            return f"Zeroshot contact results must contain {N_EXPECTED_TASKS_CONTACT} tasks."
 
         return None
 
@@ -192,6 +197,11 @@ class AutoEvalReportValidator:
         if len(supervised_contact_results) == 0:
             return None
 
-        # TODO
+        pbc_results = supervised_contact_results.get("PBC_SUPERVISED_CONTACT", None)
+        if pbc_results is None:
+            return "Supervised contact results must contain PBC framework."
+
+        if len(pbc_results.task_results) != N_EXPECTED_TASKS_CONTACT:
+            return f"Supervised contact results must contain {N_EXPECTED_TASKS_CONTACT} tasks."
 
         return None
