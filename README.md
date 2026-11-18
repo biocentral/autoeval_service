@@ -1,6 +1,6 @@
-# Biocentral public_hub_services
+# Autoeval Service
 
-Microservice to provide open functionality for the biocentral hub server
+Microservice to provide the pLM leaderboard for the [autoeval dashboard](https://github.com/sacdallago/biotrainer).
 
 ## Local Deployment
 
