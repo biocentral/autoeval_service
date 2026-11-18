@@ -10,8 +10,8 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "redis>=7.2.1",
-    "fastapi>=0.141.1,<0.150.0",
-    "uvicorn>=0.52.3,<0.60.0",
+    "fastapi>=0.162.4,<0.170.0",
+    "uvicorn>=0.54.0,<0.60.0",
     "requests>=2.34.2,<2.40.0",
     "biotrainer-core>=2.0.0,<3.0.0"
 ]
@@ -30,6 +30,7 @@ packages = ["autoeval_service"]
 
 [tool.uv]
 exclude-newer = "7 days"  # Minimum release age of pypi packages: 7 days
+exclude-newer-package = { biotrainer-core = false }  # Except for biotrainer-core
 
 [tool.uv.sources]
-biotrainer-core = { git = "https://github.com/biocentral/biotrainer.git", branch = "refactoring/autoeval", subdirectory = "biotrainer-core" }
+biotrainer-core = { git = "https://github.com/biocentral/biotrainer.git", branch = "deploy/autoeval-dashboard", subdirectory = "biotrainer-core" }
