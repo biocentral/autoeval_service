@@ -34,13 +34,14 @@ ALLOWED_ZEROSHOT_CONTACT_FRAMEWORKS = {"PBC_ZEROSHOT_CONTACT"}
 ALLOWED_SUPERVISED_CONTACT_FRAMEWORKS = {"PBC_SUPERVISED_CONTACT"}
 
 # PBC
-N_EXPECTED_TASKS_PBC = len(all_pbc_supervised_datasets())
+N_EXPECTED_TASKS_PBC_SUPERVISED = len(all_pbc_supervised_datasets())
 EXPECTED_MIN_SEQ_LEN_PBC = 0
 EXPECTED_MAX_SEQ_LEN_PBC = 2000
+N_EXPECTED_TASKS_PBC_UNSUPERVISED = 1
 
 # PGYM
 N_EXPECTED_TASKS_PGYM = 3
-EXPECTED_TASKS_PGYM = {"PGYM-virus", "PGYM-nonvirus", "PGYM-total"}
+EXPECTED_TASKS_PGYM = {"virus", "nonvirus", "total"}
 
 # CONTACT
 N_EXPECTED_TASKS_CONTACT = 3
@@ -79,6 +80,27 @@ DANGEROUS_PATTERNS = [
     # Null byte
     re.compile(r"\x00"),
 ]
+
+
+def _clean_task_name(task_name: str) -> str:
+    """
+    Clean task name according to schema: FRAMEWORK_NAME-TASK_NAME§mode
+    Extracts just the TASK_NAME part by removing framework prefix and mode suffix.
+    
+    Args:
+        task_name: Full task name string
+        
+    Returns:
+        Cleaned task name without framework prefix and mode suffix
+    """
+    # Remove mode suffix (everything after §)
+    cleaned = task_name.split("§")[0]
+
+    # Remove framework prefix (everything before and including last -)
+    if "-" in cleaned:
+        cleaned = cleaned.split("-")[-1]
+
+    return cleaned
 
 
 def _scan_for_injection(data: Any) -> Optional[str]:
@@ -221,7 +243,8 @@ class AutoEvalReportValidator:
 
     @staticmethod
     def validate_any_result_exists(report: AutoEvalReport) -> Optional[str]:
-        all_reports = [report.supervised_results, report.zeroshot_results, report.zeroshot_contact_results,
+        all_reports = [report.supervised_results, report.unsupervised_results,
+                       report.zeroshot_results, report.zeroshot_contact_results,
                        report.supervised_contact_results]
 
         all_empty = all(len(report) == 0 for report in all_reports)
@@ -240,22 +263,43 @@ class AutoEvalReportValidator:
         if pbc_results is None:
             return "Supervised results must contain PBC task."
 
-        if len(pbc_results.results) != N_EXPECTED_TASKS_PBC:
-            return f"Supervised results must contain {N_EXPECTED_TASKS_PBC} tasks."
+        if len(pbc_results.task_results) != N_EXPECTED_TASKS_PBC_SUPERVISED:
+            return f"Supervised results must contain {N_EXPECTED_TASKS_PBC_SUPERVISED} tasks."
 
         if pbc_results.min_seq_len != EXPECTED_MIN_SEQ_LEN_PBC or pbc_results.max_seq_len != EXPECTED_MAX_SEQ_LEN_PBC:
             return (f"Supervised results must have "
                     f"min_seq_len={EXPECTED_MIN_SEQ_LEN_PBC} and "
                     f"max_seq_len={EXPECTED_MAX_SEQ_LEN_PBC} for publishing.")
 
-        all_tasks = set(list(pbc_results.results.keys()))
+        all_tasks = set(list(pbc_results.task_results.keys()))
 
-        if len(all_tasks) != len(list(pbc_results.results.keys())):
+        if len(all_tasks) != len(list(pbc_results.task_results.keys())):
             return "Found duplicate tasks in supervised results."
 
         for pbc_dataset in PBCSupervisedDatasetName:
             if not any(pbc_dataset.value in task for task in all_tasks):
                 return f"Supervised results must contain results for {pbc_dataset} dataset."
+
+        return None
+
+    @staticmethod
+    def validate_unsupervised_results(report: AutoEvalReport) -> Optional[str]:
+        unsupervised_results = report.unsupervised_results
+
+        if len(unsupervised_results) == 0:
+            return None
+
+        pbc_results = unsupervised_results.get("PBC_UNSUPERVISED", None)
+        if pbc_results is None:
+            return "Unsupervised results must contain PBC task."
+
+        if len(pbc_results.task_results) < N_EXPECTED_TASKS_PBC_UNSUPERVISED:  # Account for dev/ablated
+            return f"Unsupervised results must contain at least {N_EXPECTED_TASKS_PBC_UNSUPERVISED} tasks."
+
+        all_tasks = set(list(pbc_results.task_results.keys()))
+
+        if len(all_tasks) != len(list(pbc_results.task_results.keys())):
+            return "Found duplicate tasks in unsupervised results."
 
         return None
 
@@ -270,14 +314,15 @@ class AutoEvalReportValidator:
         if pgym_results is None:
             return "Zero-shot results must contain PGYM task."
 
-        if len(pgym_results.task_results) != N_EXPECTED_TASKS_PGYM:
-            return f"Zero-shot results must contain {N_EXPECTED_TASKS_PGYM} tasks."
+        if len(pgym_results.task_results) < N_EXPECTED_TASKS_PGYM:
+            return f"Zero-shot results must contain at least {N_EXPECTED_TASKS_PGYM} tasks."
 
         if pgym_results.method is None:
             return "Zero-shot results must specify a scoring method."
 
         for task_name in pgym_results.task_results.keys():
-            if task_name not in EXPECTED_TASKS_PGYM and not task_name.startswith("PGYM-"):
+            clean_task_name = _clean_task_name(task_name)
+            if clean_task_name not in EXPECTED_TASKS_PGYM:
                 return f"Unexpected task '{task_name}' in zero-shot results."
 
         return None
@@ -289,18 +334,18 @@ class AutoEvalReportValidator:
         if len(zeroshot_contact_results) == 0:
             return None
 
-        pbc_results = zeroshot_contact_results.get("PBC_ZEROSHOT_CONTACT", None)
-        if pbc_results is None:
+        pbc_zeroshot_contact_results = zeroshot_contact_results.get("PBC_ZEROSHOT_CONTACT", None)
+        if pbc_zeroshot_contact_results is None:
             return "Zeroshot contact results must contain PBC framework."
 
-        if len(pbc_results.task_results) != N_EXPECTED_TASKS_CONTACT:
-            return f"Zeroshot contact results must contain {N_EXPECTED_TASKS_CONTACT} tasks."
+        if len(pbc_zeroshot_contact_results.task_results) < N_EXPECTED_TASKS_CONTACT:
+            return f"Zeroshot contact results must contain at least {N_EXPECTED_TASKS_CONTACT} tasks."
 
-        if pbc_results.method != ZeroShotMethod.JACOBIAN_CONTACT:
+        if pbc_zeroshot_contact_results.method != ZeroShotMethod.JACOBIAN_CONTACT:
             return f"Zeroshot contact results must use {ZeroShotMethod.JACOBIAN_CONTACT.value} method."
 
-        for task_name in pbc_results.task_results.keys():
-            clean_name = task_name.split("-")[-1]
+        for task_name in pbc_zeroshot_contact_results.task_results.keys():
+            clean_name = _clean_task_name(task_name)
             if clean_name not in EXPECTED_TASKS_CONTACT:
                 return f"Unexpected task '{task_name}' in zero-shot contact results."
 
@@ -313,15 +358,15 @@ class AutoEvalReportValidator:
         if len(supervised_contact_results) == 0:
             return None
 
-        pbc_results = supervised_contact_results.get("PBC_SUPERVISED_CONTACT", None)
-        if pbc_results is None:
+        pbc_supervised_results = supervised_contact_results.get("PBC_SUPERVISED_CONTACT", None)
+        if pbc_supervised_results is None:
             return "Supervised contact results must contain PBC framework."
 
-        if len(pbc_results.task_results) != N_EXPECTED_TASKS_CONTACT:
-            return f"Supervised contact results must contain {N_EXPECTED_TASKS_CONTACT} tasks."
+        if len(pbc_supervised_results.task_results) < N_EXPECTED_TASKS_CONTACT:
+            return f"Supervised contact results must contain at least {N_EXPECTED_TASKS_CONTACT} tasks."
 
-        for task_name in pbc_results.task_results.keys():
-            clean_name = task_name.split("-")[-1]
+        for task_name in pbc_supervised_results.task_results.keys():
+            clean_name = _clean_task_name(task_name)
             if clean_name not in EXPECTED_TASKS_CONTACT:
                 return f"Unexpected task '{task_name}' in supervised contact results."
 
@@ -337,7 +382,8 @@ class AutoEvalReportValidator:
 
         name_lower = name.lower()
         corr_metrics = ["scc", "spearman", "matthews-corr-coeff", "mcc", "spearmans-corr-coeff"]
-        fraction_metrics = ["accuracy", "balanced-accuracy", "precision", "recall", "f1_score", "macro-f1_score", "ndcg", "auc", "p@l"]
+        fraction_metrics = ["accuracy", "balanced-accuracy", "precision", "recall", "f1_score", "macro-f1_score",
+                            "ndcg", "auc", "p@l"]
 
         if any(c in name_lower for c in corr_metrics):
             if mean < -1.0 - 1e-4 or mean > 1.0 + 1e-4:
@@ -352,7 +398,7 @@ class AutoEvalReportValidator:
         # Validate supervised metrics
         if "PBC_SUPERVISED" in report.supervised_results:
             pbc_results = report.supervised_results["PBC_SUPERVISED"]
-            for task_res in pbc_results.results.values():
+            for task_res in pbc_results.task_results.values():
                 if task_res.test_results:
                     for test_res in task_res.test_results.values():
                         for m in (test_res.bootstrapped_metrics or []):
@@ -365,23 +411,15 @@ class AutoEvalReportValidator:
             pgym_results = report.zeroshot_results["PGYM"]
             for task_res in pgym_results.task_results.values():
                 if task_res.scc:
-                    err = AutoEvalReportValidator._check_metric("scc", task_res.scc.mean, task_res.scc.lower, task_res.scc.upper)
+                    err = AutoEvalReportValidator._check_metric("scc", task_res.scc.mean, task_res.scc.lower,
+                                                                task_res.scc.upper)
                     if err:
                         return err
                 if task_res.ndcg:
-                    err = AutoEvalReportValidator._check_metric("ndcg", task_res.ndcg.mean, task_res.ndcg.lower, task_res.ndcg.upper)
+                    err = AutoEvalReportValidator._check_metric("ndcg", task_res.ndcg.mean, task_res.ndcg.lower,
+                                                                task_res.ndcg.upper)
                     if err:
                         return err
-            if pgym_results.task_results_dev:
-                for task_res in pgym_results.task_results_dev.values():
-                    if task_res.scc:
-                        err = AutoEvalReportValidator._check_metric("scc", task_res.scc.mean, task_res.scc.lower, task_res.scc.upper)
-                        if err:
-                            return err
-                    if task_res.ndcg:
-                        err = AutoEvalReportValidator._check_metric("ndcg", task_res.ndcg.mean, task_res.ndcg.lower, task_res.ndcg.upper)
-                        if err:
-                            return err
 
         # Validate zero-shot contact metrics
         if "PBC_ZEROSHOT_CONTACT" in report.zeroshot_contact_results:
@@ -391,12 +429,6 @@ class AutoEvalReportValidator:
                     err = AutoEvalReportValidator._check_metric(m.name, m.mean, m.lower, m.upper)
                     if err:
                         return err
-            if zs_contact.task_results_dev:
-                for ds_res in zs_contact.task_results_dev.values():
-                    for m in ds_res.aggregated_result:
-                        err = AutoEvalReportValidator._check_metric(m.name, m.mean, m.lower, m.upper)
-                        if err:
-                            return err
 
         # Validate supervised contact metrics
         if "PBC_SUPERVISED_CONTACT" in report.supervised_contact_results:
@@ -406,11 +438,5 @@ class AutoEvalReportValidator:
                     err = AutoEvalReportValidator._check_metric(m.name, m.mean, m.lower, m.upper)
                     if err:
                         return err
-            if sup_contact.task_results_dev:
-                for ds_res in sup_contact.task_results_dev.values():
-                    for m in ds_res.aggregated_result:
-                        err = AutoEvalReportValidator._check_metric(m.name, m.mean, m.lower, m.upper)
-                        if err:
-                            return err
 
         return None

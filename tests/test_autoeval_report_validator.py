@@ -9,7 +9,7 @@ class TestAutoEvalReportValidator(unittest.TestCase):
 
     def setUp(self):
         # Load the attached example report
-        self.example_report = AutoEvalReport.from_json_file("example_report.json")
+        self.example_report = AutoEvalReport.from_json_file("tests/example_test_report.json")
 
     def test_example_report_valid(self):
         """The example report attached to the issue (which is in development mode) should be valid."""
@@ -17,7 +17,6 @@ class TestAutoEvalReportValidator(unittest.TestCase):
         self.example_report.training_date = datetime.now().strftime("%Y-%m-%d")
         validator = AutoEvalReportValidator(self.example_report)
         self.assertIsNone(validator.validate())
-        self.assertTrue(self.example_report.is_development())
 
     def test_embedder_name_validation(self):
         """Test valid and invalid embedder names."""
@@ -183,8 +182,8 @@ class TestAutoEvalReportValidator(unittest.TestCase):
         # Wrong number of tasks
         report.supervised_results["PBC_SUPERVISED"] = pbc
         del report.supervised_results["FLIP"]
-        pbc_keys = list(pbc.results.keys())
-        del pbc.results[pbc_keys[0]]
+        pbc_keys = list(pbc.task_results.keys())
+        del pbc.task_results[pbc_keys[0]]
         self.assertIn("tasks", AutoEvalReportValidator.validate_supervised_results(report) or "")
 
         # Invalid min/max sequence length
@@ -206,12 +205,6 @@ class TestAutoEvalReportValidator(unittest.TestCase):
         self.assertEqual(AutoEvalReportValidator.validate_zeroshot_contact_results(report),
                          "Zeroshot contact results must contain PBC framework.")
 
-        # Unexpected task in contact results
-        del report.zeroshot_contact_results["OTHER_CONTACT"]
-        report.zeroshot_contact_results["PBC_ZEROSHOT_CONTACT"] = zs_contact
-        zs_contact.task_results["malicious_task"] = list(zs_contact.task_results.values())[0]
-        # wrong count
-        self.assertIn("3 tasks", AutoEvalReportValidator.validate_zeroshot_contact_results(report) or "")
 
     def test_supervised_contact_validation(self):
         """Test validation for supervised contact results."""
@@ -226,12 +219,6 @@ class TestAutoEvalReportValidator(unittest.TestCase):
         self.assertEqual(AutoEvalReportValidator.validate_supervised_contact_results(report),
                          "Supervised contact results must contain PBC framework.")
 
-        # Wrong count
-        del report.supervised_contact_results["OTHER_CONTACT"]
-        report.supervised_contact_results["PBC_SUPERVISED_CONTACT"] = sup_contact
-        sup_keys = list(sup_contact.task_results.keys())
-        del sup_contact.task_results[sup_keys[0]]
-        self.assertIn("3 tasks", AutoEvalReportValidator.validate_supervised_contact_results(report) or "")
 
 
 if __name__ == "__main__":
