@@ -1,6 +1,6 @@
 [project]
 name = "autoeval-service"
-version = "2.0.0"
+version = "2.1.2"
 description = "Autoeval service powering the autoeval comparison dashboard"
 authors = [
     {name = "Sebastian", email = "sebastian.franz@tum.de"}
